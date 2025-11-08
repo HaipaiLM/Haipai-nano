@@ -114,24 +114,6 @@ Each block uses:
 
 ---
 
-## 📂 Repository Structure
-
-```
-model_safe/
-├── modeling_haipai.py        # Full HaipaiLM model definition
-├── inference.py              # Inference + sampling CLI
-├── config.json               # Model dimensions + metadata
-├── model.safetensors         # EMA-smoothed weights
-├── tokenizer/
-│   ├── tokenizer.json
-│   ├── tokenizer_config.json
-│   ├── special_tokens_map.json
-│   └── vocab.json
-└── README.md
-```
-
----
-
 ## 🧪 Local Inference
 
 ```python
