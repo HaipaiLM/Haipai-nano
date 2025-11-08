@@ -1,4 +1,4 @@
-# 🧠 **Haipai-50M-EMA — A Readable, Modern GPT-Style Transformer**
+# 🧠 **model_safe — A Readable, Modern GPT-Style Transformer**
 
 **Haipai** (“high-pie”) is a compact, fully readable **decoder-only Transformer** you can understand, train, and extend yourself.
 It’s designed to behave like a scaled-down GPT-style model — but remain small enough to fit comfortably on a single modern GPU (or even CPU inference).
@@ -122,7 +122,7 @@ from safetensors.torch import load_file
 from transformers import AutoTokenizer
 from modeling_haipai import HaipaiLM
 
-repo_dir = "./haipai-50m-ema"
+repo_dir = "./model_safe"
 
 # 1. Load config + tokenizer
 with open(os.path.join(repo_dir, "config.json")) as f:
@@ -153,7 +153,7 @@ with torch.no_grad():
 ## 💻 CLI Inference
 
 ```bash
-python inference.py --local_dir "./haipai-50m-ema" --prompt "Doctor told" --device cpu
+python inference.py --local_dir "./model_safe" --prompt "Doctor told" --device cpu
 ```
 
 Options:
