@@ -56,7 +56,8 @@ Tied LM Head (shared with Embedding)
 
 This schematic shows how **HaipaiLM** processes tokens:
 
-![Haipai Transformer Architecture](./architecture.png)
+<img width="938" height="665" alt="diagram-export-11-8-2025-9_11_04-PM" src="https://github.com/user-attachments/assets/39e4b6b1-c889-4c2c-a94e-f8386a0cae26" />
+
 
 Each block uses:
 
@@ -262,7 +263,7 @@ You can scale the model easily:
   title   = {Haipai: A Minimal, Modern GPT-Style Language Model (~50M, EMA)},
   author  = {Md Rakibul Islam Rocky},
   year    = {2025},
-  url     = {https://huggingface.co/rocky1410/haipai-50m-ema}
+  url     = {https://huggingface.co/rocky1410/haipai-nano}
 }
 ```
 
