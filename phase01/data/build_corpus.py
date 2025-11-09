@@ -33,7 +33,7 @@ def write_record(out_path: Path, source: str, text: str, extra: Optional[dict] =
 
 
 def gather_fineweb(snapshot: str, limit: int, out_path: Path):
-    ds = load_dataset("HuggingFaceFW/fineweb-edu", split="train", streaming=False)
+    ds = load_dataset("HuggingFaceFW/fineweb-edu", split="CC-MAIN-2025-26", streaming=False)
     count = 0
     for example in tqdm(ds, desc="FineWeb-Edu", unit="sample"):
         meta = example.get("meta", {})
