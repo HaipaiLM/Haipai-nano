@@ -34,12 +34,17 @@ def main():
         audiences=["experts", "students", "managers", "kids"],
         text_key=args.text_key,
     )
-    augmented = []
-    for example in iter_reformatted(dataset, reformer):
-        augmented.append(example)
-    print(f"Augmented {len(augmented)} samples via MGA.")
+    augmented_count = 0
+    for _ in iter_reformatted(dataset, reformer):
+        augmented_count += 1
+    print(f"Augmented {augmented_count} samples via MGA.")
     with tqdm(total=1, desc="Tokenizer train", unit="phase") as pbar:
-        train_tokenizer(args.dataset, args.text_key, args.tokenizer_output)
+        train_tokenizer(
+            args.dataset,
+            args.text_key,
+            args.tokenizer_output,
+            dataset_files=args.dataset_files,
+        )
         pbar.update()
 
 
