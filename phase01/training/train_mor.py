@@ -64,7 +64,7 @@ def main():
     args = parser.parse_args()
 
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
-    model = TinyMoR(MoRConfig(vocab_size=tokenizer.vocab_size))
+    model = TinyMoR(MoRConfig(vocab_size=tokenizer.vocab_size, max_seq_len=4096))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     optimizer = AdamW(model.parameters(), lr=args.lr)

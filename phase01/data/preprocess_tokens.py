@@ -67,7 +67,7 @@ def main():
     parser = argparse.ArgumentParser("Pre-tokenize JSONL files into fixed-length tensor shards.")
     parser.add_argument("--tokenizer_path", required=True)
     parser.add_argument("--jsonl", nargs="+", type=Path, required=True)
-    parser.add_argument("--seq_len", type=int, default=2048)
+    parser.add_argument("--seq_len", type=int, default=4096)
     parser.add_argument("--shard_size", type=int, default=1024, help="Number of sequences per shard.")
     parser.add_argument("--output_dir", type=Path, default=Path("tokenized"))
     parser.add_argument("--num_workers", type=int, default=4)
