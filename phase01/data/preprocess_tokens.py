@@ -67,15 +67,18 @@ def main():
                 return v
             if isinstance(v, str):
                 v = v.strip()
-                if v.lower() == "none" or v == "":
+                if not v or v.lower() == "none":
                     return default
                 iv = int(v)
-                return iv if iv > 0 else default
+                if iv > 0:
+                    return iv
         except Exception:
-            pass
+            return default
         return default
 
-    seq_len = _coerce_seq_len(getattr(args,'seq_len', None))
+    seq_len = _coerce_seq_len(getattr(args, "seq_len", None))
+    if not isinstance(seq_len, int) or seq_len <= 0:
+        seq_len = 4096
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
