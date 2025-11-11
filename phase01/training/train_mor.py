@@ -6,7 +6,19 @@ from typing import Iterator, Sequence
 import torch
 from torch.optim import AdamW
 from tqdm.auto import tqdm
-from transformers import AutoTokenizer
+from transformers import PreTrainedTokenizerFast
+from pathlib import Path
+
+
+def _resolve_tokenizer_file(path: str) -> str:
+    p = Path(path)
+    if p.is_dir():
+        file_path = p / "tokenizer.json"
+    else:
+        file_path = p
+    if not file_path.exists():
+        raise FileNotFoundError(f"Tokenizer file not found: {file_path}")
+    return str(file_path)
 
 from phase01.models.mor import MoRConfig, TinyMoR
 from phase01.utils.logging import wandb_run
@@ -63,7 +75,7 @@ def main():
     parser.add_argument("--disable_wandb", action="store_true")
     args = parser.parse_args()
 
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
+    tokenizer = PreTrainedTokenizerFast(tokenizer_file=_resolve_tokenizer_file(args.tokenizer_path))
     model = TinyMoR(MoRConfig(vocab_size=tokenizer.vocab_size, max_seq_len=4096))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)

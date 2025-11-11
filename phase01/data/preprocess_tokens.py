@@ -9,17 +9,29 @@ import json
 from pathlib import Path
 from typing import Iterable, List, Sequence
 
+import multiprocessing as mp
 import torch
 from tqdm.auto import tqdm
-from transformers import AutoTokenizer
-import multiprocessing as mp
+from transformers import PreTrainedTokenizerFast
 
 _TOKENIZER = None
 
 
+def _resolve_tokenizer_file(path: str) -> str:
+    path = Path(path)
+    if path.is_dir():
+        file_path = path / "tokenizer.json"
+    else:
+        file_path = path
+    if not file_path.exists():
+        raise FileNotFoundError(f"Tokenizer file not found: {file_path}")
+    return str(file_path)
+
+
 def _worker_init(tokenizer_path: str):
     global _TOKENIZER
-    _TOKENIZER = AutoTokenizer.from_pretrained(tokenizer_path)
+    file_path = _resolve_tokenizer_file(tokenizer_path)
+    _TOKENIZER = PreTrainedTokenizerFast(tokenizer_file=file_path)
     if _TOKENIZER.pad_token is None:
         _TOKENIZER.pad_token = _TOKENIZER.eos_token
 
@@ -65,7 +77,7 @@ def batched(iterable, batch_size):
 
 def main():
     parser = argparse.ArgumentParser("Pre-tokenize JSONL files into fixed-length tensor shards.")
-    parser.add_argument("--tokenizer_path", required=True)
+    parser.add_argument("--tokenizer_path", required=True, help="Path to dir or tokenizer.json file.")
     parser.add_argument("--jsonl", nargs="+", type=Path, required=True)
     parser.add_argument("--seq_len", type=int, default=4096)
     parser.add_argument("--shard_size", type=int, default=1024, help="Number of sequences per shard.")
@@ -74,7 +86,7 @@ def main():
     parser.add_argument("--encode_batch", type=int, default=256, help="Texts per worker batch.")
     args = parser.parse_args()
 
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
+    tokenizer = PreTrainedTokenizerFast(tokenizer_file=_resolve_tokenizer_file(args.tokenizer_path))
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     eos_id = tokenizer.eos_token_id
