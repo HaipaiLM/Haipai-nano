@@ -7,11 +7,26 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable, List, Sequence
 
 import torch
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
+import multiprocessing as mp
+
+_TOKENIZER = None
+
+
+def _worker_init(tokenizer_path: str):
+    global _TOKENIZER
+    _TOKENIZER = AutoTokenizer.from_pretrained(tokenizer_path)
+    if _TOKENIZER.pad_token is None:
+        _TOKENIZER.pad_token = _TOKENIZER.eos_token
+
+
+def _encode_batch(text_batch: Sequence[str]):
+    encoded = _TOKENIZER(list(text_batch), add_special_tokens=True, return_attention_mask=False)
+    return encoded["input_ids"]
 
 
 def iter_jsonl(paths: Iterable[Path]):
@@ -37,6 +52,17 @@ def flush_shard(buffer_inputs: List[torch.Tensor], buffer_labels: List[torch.Ten
     return shard_idx + 1
 
 
+def batched(iterable, batch_size):
+    batch = []
+    for item in iterable:
+        batch.append(item)
+        if len(batch) == batch_size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
+
+
 def main():
     parser = argparse.ArgumentParser("Pre-tokenize JSONL files into fixed-length tensor shards.")
     parser.add_argument("--tokenizer_path", required=True)
@@ -44,6 +70,8 @@ def main():
     parser.add_argument("--seq_len", type=int, default=2048)
     parser.add_argument("--shard_size", type=int, default=1024, help="Number of sequences per shard.")
     parser.add_argument("--output_dir", type=Path, default=Path("tokenized"))
+    parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("--encode_batch", type=int, default=256, help="Texts per worker batch.")
     args = parser.parse_args()
 
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
@@ -58,22 +86,43 @@ def main():
     shard_labels: List[torch.Tensor] = []
     shard_idx = 0
 
-    for text in tqdm(iter_jsonl(args.jsonl), desc="Tokenizing corpus", unit="sample"):
-        encoded = tokenizer(text, add_special_tokens=True, return_attention_mask=False)
-        ids = encoded["input_ids"] + [eos_id]
-        token_buffer.extend(ids)
+    text_iter =iter_jsonl(args.jsonl)
+    batches = batched(text_iter, args.encode_batch)
 
-        while len(token_buffer) >= args.seq_len + 1:
-            input_ids = torch.tensor(token_buffer[: args.seq_len], dtype=torch.long)
-            labels = torch.tensor(token_buffer[1 : args.seq_len + 1], dtype=torch.long)
-            token_buffer = token_buffer[args.seq_len :]
-            shard_inputs.append(input_ids)
-            shard_labels.append(labels)
+    if args.num_workers > 1:
+        with mp.Pool(args.num_workers, initializer=_worker_init, initargs=(args.tokenizer_path,)) as pool:
+            iterator = pool.imap(_encode_batch, batches)
+            iterator = tqdm(iterator, desc="Tokenizing corpus", unit="batch")
+            for token_lists in iterator:
+                for ids in token_lists:
+                    token_buffer.extend(ids + [eos_id])
+                    while len(token_buffer) >= args.seq_len + 1:
+                        input_ids = torch.tensor(token_buffer[: args.seq_len], dtype=torch.long)
+                        labels = torch.tensor(token_buffer[1 : args.seq_len + 1], dtype=torch.long)
+                        token_buffer = token_buffer[args.seq_len :]
+                        shard_inputs.append(input_ids)
+                        shard_labels.append(labels)
 
-            if len(shard_inputs) >= args.shard_size:
-                shard_idx = flush_shard(shard_inputs, shard_labels, shard_idx, args.output_dir)
-                shard_inputs.clear()
-                shard_labels.clear()
+                        if len(shard_inputs) >= args.shard_size:
+                            shard_idx = flush_shard(shard_inputs, shard_labels, shard_idx, args.output_dir)
+                            shard_inputs.clear()
+                            shard_labels.clear()
+    else:
+        _worker_init(args.tokenizer_path)
+        for token_lists in tqdm(( _encode_batch(batch) for batch in batches), desc="Tokenizing corpus", unit="batch"):
+            for ids in token_lists:
+                token_buffer.extend(ids + [eos_id])
+                while len(token_buffer) >= args.seq_len + 1:
+                    input_ids = torch.tensor(token_buffer[: args.seq_len], dtype=torch.long)
+                    labels = torch.tensor(token_buffer[1 : args.seq_len + 1], dtype=torch.long)
+                    token_buffer = token_buffer[args.seq_len :]
+                    shard_inputs.append(input_ids)
+                    shard_labels.append(labels)
+
+                    if len(shard_inputs) >= args.shard_size:
+                        shard_idx = flush_shard(shard_inputs, shard_labels, shard_idx, args.output_dir)
+                        shard_inputs.clear()
+                        shard_labels.clear()
 
     if len(token_buffer) > args.seq_len:
         token_buffer.extend([eos_id] * args.seq_len)
