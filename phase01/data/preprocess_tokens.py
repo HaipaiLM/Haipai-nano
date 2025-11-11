@@ -61,7 +61,21 @@ def main():
     parser.add_argument("--batch_texts", type=int, default=256)
     args = parser.parse_args()
 
-    seq_len = int(args.seq_len)
+    def _coerce_seq_len(v, default=4096):
+        try:
+            if isinstance(v, int) and v > 0:
+                return v
+            if isinstance(v, str):
+                v = v.strip()
+                if v.lower() == "none" or v == "":
+                    return default
+                iv = int(v)
+                return iv if iv > 0 else default
+        except Exception:
+            pass
+        return default
+
+    seq_len = _coerce_seq_len(getattr(args,'seq_len', None))
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
