@@ -93,7 +93,7 @@ def main():
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    seq_len = int(args.seq_len)
+    seq_len = int(args.seq_len if args.seq_len is not None else 4096)
 
     token_buffer: List[int] = []
     shard_inputs: List[torch.Tensor] = []
