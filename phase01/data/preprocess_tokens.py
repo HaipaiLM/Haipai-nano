@@ -93,7 +93,11 @@ def main():
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    seq_len = int(args.seq_len if args.seq_len is not None else 4096)
+    seq_len_val = args.seq_len if args.seq_len not in (None, "None", "") else 4096
+    try:
+        seq_len = int(seq_len_val)
+    except (TypeError, ValueError):
+        raise ValueError(f"Invalid --seq_len value: {args.seq_len}")
 
     token_buffer: List[int] = []
     shard_inputs: List[torch.Tensor] = []
