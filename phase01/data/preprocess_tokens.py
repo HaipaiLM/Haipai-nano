@@ -93,12 +93,14 @@ def main():
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
+    seq_len = int(args.seq_len)
+
     token_buffer: List[int] = []
     shard_inputs: List[torch.Tensor] = []
     shard_labels: List[torch.Tensor] = []
     shard_idx = 0
 
-    text_iter =iter_jsonl(args.jsonl)
+    text_iter = iter_jsonl(args.jsonl)
     batches = batched(text_iter, args.encode_batch)
 
     if args.num_workers > 1:
@@ -108,10 +110,10 @@ def main():
             for token_lists in iterator:
                 for ids in token_lists:
                     token_buffer.extend(ids + [eos_id])
-                    while len(token_buffer) >= args.seq_len + 1:
-                        input_ids = torch.tensor(token_buffer[: args.seq_len], dtype=torch.long)
-                        labels = torch.tensor(token_buffer[1 : args.seq_len + 1], dtype=torch.long)
-                        token_buffer = token_buffer[args.seq_len :]
+                    while len(token_buffer) >= seq_len + 1:
+                        input_ids = torch.tensor(token_buffer[:seq_len], dtype=torch.long)
+                        labels = torch.tensor(token_buffer[1 : seq_len + 1], dtype=torch.long)
+                        token_buffer = token_buffer[seq_len :]
                         shard_inputs.append(input_ids)
                         shard_labels.append(labels)
 
@@ -124,10 +126,10 @@ def main():
         for token_lists in tqdm(( _encode_batch(batch) for batch in batches), desc="Tokenizing corpus", unit="batch"):
             for ids in token_lists:
                 token_buffer.extend(ids + [eos_id])
-                while len(token_buffer) >= args.seq_len + 1:
-                    input_ids = torch.tensor(token_buffer[: args.seq_len], dtype=torch.long)
-                    labels = torch.tensor(token_buffer[1 : args.seq_len + 1], dtype=torch.long)
-                    token_buffer = token_buffer[args.seq_len :]
+                while len(token_buffer) >= seq_len + 1:
+                    input_ids = torch.tensor(token_buffer[:seq_len], dtype=torch.long)
+                    labels = torch.tensor(token_buffer[1 : seq_len + 1], dtype=torch.long)
+                    token_buffer = token_buffer[seq_len :]
                     shard_inputs.append(input_ids)
                     shard_labels.append(labels)
 
@@ -136,12 +138,12 @@ def main():
                         shard_inputs.clear()
                         shard_labels.clear()
 
-    if len(token_buffer) > args.seq_len:
-        token_buffer.extend([eos_id] * args.seq_len)
-        while len(token_buffer) >= args.seq_len + 1:
-            input_ids = torch.tensor(token_buffer[: args.seq_len], dtype=torch.long)
-            labels = torch.tensor(token_buffer[1 : args.seq_len + 1], dtype=torch.long)
-            token_buffer = token_buffer[args.seq_len :]
+    if len(token_buffer) > seq_len:
+        token_buffer.extend([eos_id] * seq_len)
+        while len(token_buffer) >= seq_len + 1:
+            input_ids = torch.tensor(token_buffer[:seq_len], dtype=torch.long)
+            labels = torch.tensor(token_buffer[1 : seq_len + 1], dtype=torch.long)
+            token_buffer = token_buffer[seq_len :]
             shard_inputs.append(input_ids)
             shard_labels.append(labels)
 
